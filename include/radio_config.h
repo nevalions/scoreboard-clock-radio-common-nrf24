@@ -3,6 +3,11 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+// Use ESP-IDF types when available
+#if defined(ESP_IDF_VER) || defined(__ESP32__) || defined(ESP_PLATFORM)
+#include "driver/gpio.h"
+#include "driver/spi_master.h"
+#else
 // GPIO pin definitions (compatible with ESP32)
 typedef enum {
     GPIO_NUM_0 = 0,
@@ -22,6 +27,7 @@ typedef enum {
     SPI2_HOST = 1,
     SPI3_HOST = 2
 } spi_host_device_t;
+#endif
 
 // Logging macros (will be overridden by ESP-IDF when available)
 #ifndef ESP_LOGD
