@@ -1,16 +1,27 @@
+// Radio common includes
 #include "../include/radio_common.h"
 #include <string.h>
 #include <stdio.h>
 
+
+
+// Define TAG if ESP32 headers not available
+#ifndef TAG
 static const char* TAG = "RADIO_COMMON";
+#endif
 
 // =============================================================================
 // PLATFORM-SPECIFIC IMPLEMENTATIONS
 // =============================================================================
 
-#if 0 // defined(ESP32) || defined(CONFIG_IDF_TARGET_ESP32)
+#if defined(ESP_PLATFORM) || defined(ESP32) || defined(CONFIG_IDF_TARGET_ESP32)
 // ESP32 specific SPI implementation
 static uint8_t spi_transfer(RadioCommon* radio, uint8_t data) {
+    if (!radio->spi) {
+        ESP_LOGE(TAG, "SPI device handle is NULL!");
+        return 0xFF;
+    }
+    
     uint8_t rx_data;
     spi_transaction_t trans = {
         .length = 8,
@@ -18,7 +29,7 @@ static uint8_t spi_transfer(RadioCommon* radio, uint8_t data) {
         .rx_buffer = &rx_data
     };
     
-    esp_err_t ret = spi_device_transmit(radio->spi, &trans);
+    esp_err_t ret = spi_device_transmit((spi_device_handle_t)radio->spi, &trans);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "SPI transfer failed: %s", esp_err_to_name(ret));
         return 0xFF;
@@ -35,8 +46,6 @@ static void gpio_write(gpio_num_t pin, bool level) {
 static void delay_ms(uint32_t ms) {
     vTaskDelay(pdMS_TO_TICKS(ms));
 }
-
-
 
 #else
 // Generic platform implementations (weak symbols)
@@ -193,7 +202,7 @@ void nrf24_flush_tx(RadioCommon* radio) {
 // COMMON RADIO INITIALIZATION
 // =============================================================================
 
-#if 0 // defined(ESP32) || defined(CONFIG_IDF_TARGET_ESP32)
+#if defined(ESP_PLATFORM) || defined(ESP32) || defined(CONFIG_IDF_TARGET_ESP32)
 bool radio_common_spi_init(RadioCommon* radio) {
     if (!radio) return false;
     
@@ -213,17 +222,20 @@ bool radio_common_spi_init(RadioCommon* radio) {
         .queue_size = 7
     };
 
+    ESP_LOGI(TAG, "Initializing SPI bus with MOSI=%d, MISO=%d, SCK=%d", RADIO_MOSI_PIN, RADIO_MISO_PIN, RADIO_SCK_PIN);
     esp_err_t ret = spi_bus_initialize(RADIO_SPI_HOST, &bus_cfg, SPI_DMA_CH_AUTO);
     if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {  // ESP_ERR_INVALID_STATE means already initialized
         ESP_LOGE(TAG, "SPI bus initialization failed: %s", esp_err_to_name(ret));
         return false;
     }
+    ESP_LOGI(TAG, "SPI bus initialized successfully");
     
-    ret = spi_bus_add_device(RADIO_SPI_HOST, &dev_cfg, &radio->spi);
+    ret = spi_bus_add_device(RADIO_SPI_HOST, &dev_cfg, (spi_device_handle_t*)&radio->spi);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "SPI device addition failed: %s", esp_err_to_name(ret));
         return false;
     }
+    ESP_LOGI(TAG, "SPI device added successfully, handle=%p", radio->spi);
     
     ESP_LOGI(TAG, "SPI initialized successfully");
     return true;
@@ -246,7 +258,7 @@ bool radio_common_init(RadioCommon* radio, gpio_num_t ce_pin, gpio_num_t csn_pin
     memcpy(radio->tx_address, default_addr, 5);
     memcpy(radio->rx_address, default_addr, 5);
     
-#if 0 // defined(ESP32) || defined(CONFIG_IDF_TARGET_ESP32)
+#if defined(ESP_PLATFORM) || defined(ESP32) || defined(CONFIG_IDF_TARGET_ESP32)
     // Initialize GPIO pins
     gpio_config_t io_conf = {
         .pin_bit_mask = (1ULL << ce_pin) | (1ULL << csn_pin),
@@ -258,16 +270,20 @@ bool radio_common_init(RadioCommon* radio, gpio_num_t ce_pin, gpio_num_t csn_pin
     gpio_config(&io_conf);
     
     // Initialize SPI
+    ESP_LOGI(TAG, "About to call radio_common_spi_init");
     if (!radio_common_spi_init(radio)) {
         ESP_LOGE(TAG, "SPI initialization failed");
         return false;
     }
+    ESP_LOGI(TAG, "radio_common_spi_init completed");
 #else
     // Use platform-specific initialization
+    ESP_LOGI(TAG, "About to call radio_common_platform_init");
     if (!radio_common_platform_init(radio)) {
         ESP_LOGE(TAG, "Platform initialization failed");
         return false;
     }
+    ESP_LOGI(TAG, "radio_common_platform_init completed");
 #endif
     
     // Set initial pin states
@@ -386,6 +402,7 @@ void radio_common_dump_registers(RadioCommon* radio) {
     }
     
     ESP_LOGI(TAG, "=== nRF24L01+ Register Dump ===");
+    ESP_LOGI(TAG, "SPI handle: %p", radio->spi);
     
     // Read and display key registers
     uint8_t config = nrf24_read_register(radio, NRF24_REG_CONFIG);

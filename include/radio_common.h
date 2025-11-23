@@ -1,12 +1,14 @@
 #pragma once
 
-#include "radio_config.h"
-
-#if 0 // defined(ESP32) || defined(CONFIG_IDF_TARGET_ESP32)
+#if defined(ESP_PLATFORM) || defined(ESP32) || defined(CONFIG_IDF_TARGET_ESP32)
+#include "esp_log.h"
 #include "driver/spi_master.h"
+#include "driver/gpio.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #endif
+
+#include "radio_config.h"
 
 // =============================================================================
 // COMMON RADIO STRUCTURES
@@ -22,10 +24,8 @@ typedef struct {
     uint8_t tx_address[5];
     uint8_t rx_address[5];
     
-#if 0 // defined(ESP32) || defined(CONFIG_IDF_TARGET_ESP32)
-    // ESP32 specific
-    spi_device_handle_t spi;
-#endif
+    // SPI device handle (always included for ESP32)
+    void* spi;
 } RadioCommon;
 
 // =============================================================================
@@ -79,7 +79,7 @@ bool radio_common_validate_config(RadioCommon* radio);
 // PLATFORM-SPECIFIC FUNCTIONS
 // =============================================================================
 
-#ifdef ESP32
+#if defined(ESP_PLATFORM) || defined(ESP32) || defined(CONFIG_IDF_TARGET_ESP32)
 // ESP32 specific SPI functions
 bool radio_common_spi_init(RadioCommon* radio);
 uint8_t radio_common_spi_transfer(RadioCommon* radio, uint8_t data);
