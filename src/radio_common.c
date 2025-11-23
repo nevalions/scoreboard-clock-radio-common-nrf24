@@ -8,7 +8,7 @@ static const char* TAG = "RADIO_COMMON";
 // PLATFORM-SPECIFIC IMPLEMENTATIONS
 // =============================================================================
 
-#ifdef ESP32
+#if 0 // defined(ESP32) || defined(CONFIG_IDF_TARGET_ESP32)
 // ESP32 specific SPI implementation
 static uint8_t spi_transfer(RadioCommon* radio, uint8_t data) {
     uint8_t rx_data;
@@ -36,10 +36,7 @@ static void delay_ms(uint32_t ms) {
     vTaskDelay(pdMS_TO_TICKS(ms));
 }
 
-static void delay_us(uint32_t us) {
-    // For ESP32, approximate microsecond delay
-    ets_delay_us(us);
-}
+
 
 #else
 // Generic platform implementations (weak symbols)
@@ -196,7 +193,7 @@ void nrf24_flush_tx(RadioCommon* radio) {
 // COMMON RADIO INITIALIZATION
 // =============================================================================
 
-#ifdef ESP32
+#if 0 // defined(ESP32) || defined(CONFIG_IDF_TARGET_ESP32)
 bool radio_common_spi_init(RadioCommon* radio) {
     if (!radio) return false;
     
@@ -249,7 +246,7 @@ bool radio_common_init(RadioCommon* radio, gpio_num_t ce_pin, gpio_num_t csn_pin
     memcpy(radio->tx_address, default_addr, 5);
     memcpy(radio->rx_address, default_addr, 5);
     
-#ifdef ESP32
+#if 0 // defined(ESP32) || defined(CONFIG_IDF_TARGET_ESP32)
     // Initialize GPIO pins
     gpio_config_t io_conf = {
         .pin_bit_mask = (1ULL << ce_pin) | (1ULL << csn_pin),

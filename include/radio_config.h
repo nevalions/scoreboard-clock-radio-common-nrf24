@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 // Use ESP-IDF types when available
-#if defined(ESP_IDF_VER) || defined(__ESP32__) || defined(ESP_PLATFORM)
+#if defined(ESP_IDF_VER) || defined(__ESP32__) || defined(ESP_PLATFORM) // || defined(CONFIG_IDF_TARGET_ESP32)
 #include "driver/gpio.h"
 #include "driver/spi_master.h"
 #else

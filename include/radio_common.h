@@ -2,7 +2,7 @@
 
 #include "radio_config.h"
 
-#ifdef ESP32
+#if 0 // defined(ESP32) || defined(CONFIG_IDF_TARGET_ESP32)
 #include "driver/spi_master.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -22,7 +22,7 @@ typedef struct {
     uint8_t tx_address[5];
     uint8_t rx_address[5];
     
-#ifdef ESP32
+#if 0 // defined(ESP32) || defined(CONFIG_IDF_TARGET_ESP32)
     // ESP32 specific
     spi_device_handle_t spi;
 #endif
