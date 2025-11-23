@@ -358,6 +358,9 @@ bool radio_common_configure(RadioCommon* radio) {
     nrf24_flush_rx(radio);
     nrf24_flush_tx(radio);
     
+    // Power up the radio
+    nrf24_power_up(radio);
+    
     ESP_LOGI(TAG, "Radio configured successfully");
     return true;
 }
