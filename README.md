@@ -2,8 +2,6 @@
 
 A centralized radio configuration and communication library for ESP32-based scoreboard timer modules using nRF24L01+ radio modules.
 
-**Purpose**: This library synchronizes radio settings across all scoreboard timer submodules. It is designed as a Git submodule used by both the parent project and individual modules that require radio communication.
-
 ## Overview
 
 This library provides a common interface for nRF24L01+ radio communication across all scoreboard timer modules:
@@ -212,6 +210,8 @@ make
 
 The library automatically detects ESP-IDF environment and registers as a component.
 
+For detailed development guidelines and coding standards, see [AGENTS.md](AGENTS.md).
+
 ## License
 
 This library is released under the same license as the scoreboard clock project.
@@ -222,4 +222,4 @@ When making changes:
 1. Maintain backward compatibility
 2. Update documentation
 3. Test on all supported platforms
-4. Follow existing code style
+4. Follow existing code style (see [AGENTS.md](AGENTS.md) for guidelines)
