@@ -48,7 +48,7 @@ typedef enum {
 // =============================================================================
 
 // Radio network settings
-#define RADIO_CHANNEL 76
+#define RADIO_CHANNEL 20
 #define RADIO_ADDRESS {0xE7, 0xE7, 0xE7, 0xE7, 0xE7}
 #define RADIO_PAYLOAD_SIZE 6
 
@@ -161,8 +161,8 @@ typedef enum {
 #define RADIO_CONFIG_TX_MODE (RADIO_CONFIG_CRC_ENABLED | NRF24_CONFIG_PWR_UP)
 #define RADIO_CONFIG_RX_MODE (RADIO_CONFIG_CRC_ENABLED | NRF24_CONFIG_PWR_UP | NRF24_CONFIG_PRIM_RX)
 
-// Auto retransmission settings (750us delay, up to 3 retries)
-#define RADIO_SETUP_RETR 0x2F
+// Auto retransmission settings (500us delay, up to 15 retries)
+#define RADIO_SETUP_RETR 0x4F
 
 // Address width (5 bytes)
 #define RADIO_SETUP_AW 0x03
