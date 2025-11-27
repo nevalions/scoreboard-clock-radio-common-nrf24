@@ -50,7 +50,7 @@ typedef enum {
 // Radio network settings
 #define RADIO_CHANNEL 76
 #define RADIO_ADDRESS {0xE7, 0xE7, 0xE7, 0xE7, 0xE7}
-#define RADIO_PAYLOAD_SIZE 32
+#define RADIO_PAYLOAD_SIZE 6
 
 // Radio performance settings
 #define RADIO_DATA_RATE_1MBPS 0x06  // RF_SETUP value for 1Mbps
