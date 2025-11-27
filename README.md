@@ -5,6 +5,7 @@ A centralized radio configuration and communication library for ESP32-based scor
 ## Overview
 
 This library provides a common interface for nRF24L01+ radio communication across all scoreboard timer modules:
+
 - Controller (master)
 - Play Clock (display)
 - Repeater (range extender)
@@ -22,11 +23,13 @@ This library provides a common interface for nRF24L01+ radio communication acros
 ### Installation
 
 Add as Git submodule to your ESP-IDF project:
+
 ```bash
 git submodule add https://github.com/nevalions/scoreboard-clock-radio-common-nrf24.git radio-common
 ```
 
 Update your `CMakeLists.txt`:
+
 ```cmake
 add_subdirectory(radio-common)
 target_link_libraries(your_target radio_common)
@@ -58,11 +61,13 @@ nrf24_write_register(&radio, NRF24_REG_CONFIG, RADIO_CONFIG_TX_MODE);
 ## Hardware Configuration
 
 ### Default Pinout
+
 - **SPI Interface**: SPI2 (MOSI: GPIO23, MISO: GPIO19, SCK: GPIO18)
 - **Control Pins**: CE (GPIO5), CSN (GPIO4)
 - **Status LED**: GPIO2
 
 ### Radio Settings
+
 - **Channel**: 76 (2.476 GHz)
 - **Data Rate**: 1 Mbps
 - **Power Level**: 0 dBm
@@ -98,9 +103,9 @@ gpio_write(radio.ce_pin, 1);
 if (nrf24_get_status(&radio) & NRF24_STATUS_RX_DR) {
     uint8_t payload[32];
     nrf24_read_payload(&radio, payload, sizeof(payload));
-    
+
     // Process received data...
-    
+
     // Clear RX flag
     nrf24_write_register(&radio, NRF24_REG_STATUS, NRF24_STATUS_RX_DR);
 }
@@ -133,36 +138,39 @@ typedef struct {
 
 ### Core Functions
 
-| Function | Purpose |
-|----------|---------|
-| `radio_common_init()` | Initialize radio hardware |
-| `radio_common_configure()` | Apply standard configuration |
-| `radio_common_set_addresses()` | Set TX/RX addresses |
-| `radio_common_dump_registers()` | Debug register dump |
-| `radio_common_is_connected()` | Check hardware connectivity |
-| `radio_common_validate_config()` | Validate radio settings |
+| Function                         | Purpose                      |
+| -------------------------------- | ---------------------------- |
+| `radio_common_init()`            | Initialize radio hardware    |
+| `radio_common_configure()`       | Apply standard configuration |
+| `radio_common_set_addresses()`   | Set TX/RX addresses          |
+| `radio_common_dump_registers()`  | Debug register dump          |
+| `radio_common_is_connected()`    | Check hardware connectivity  |
+| `radio_common_validate_config()` | Validate radio settings      |
 
 ### Low-Level Functions
 
-| Function | Purpose |
-|----------|---------|
-| `nrf24_read_register()` | Read radio register |
+| Function                 | Purpose              |
+| ------------------------ | -------------------- |
+| `nrf24_read_register()`  | Read radio register  |
 | `nrf24_write_register()` | Write radio register |
-| `nrf24_get_status()` | Get status register |
-| `nrf24_read_payload()` | Read RX payload |
-| `nrf24_write_payload()` | Write TX payload |
-| `nrf24_flush_rx()` | Flush RX buffer |
-| `nrf24_flush_tx()` | Flush TX buffer |
-| `nrf24_power_up()` | Power up radio |
-| `nrf24_power_down()` | Power down radio |
+| `nrf24_get_status()`     | Get status register  |
+| `nrf24_read_payload()`   | Read RX payload      |
+| `nrf24_write_payload()`  | Write TX payload     |
+| `nrf24_flush_rx()`       | Flush RX buffer      |
+| `nrf24_flush_tx()`       | Flush TX buffer      |
+| `nrf24_power_up()`       | Power up radio       |
+| `nrf24_power_down()`     | Power down radio     |
 
 ## Platform Support
 
 ### ESP32 (Primary)
+
 Full support with ESP-IDF framework including SPI driver integration, GPIO control, FreeRTOS delays, and ESP logging system.
 
 ### Other Platforms
+
 Generic platform support using weak symbols. Implement these functions:
+
 - `radio_common_platform_init()`
 - `radio_common_platform_transfer()`
 - `radio_common_delay_ms/us()`
@@ -170,11 +178,13 @@ Generic platform support using weak symbols. Implement these functions:
 ## Debugging
 
 ### Enable Debug Logging
+
 ```c
 #define RADIO_DEBUG_ENABLED 1
 ```
 
 ### Common Debug Commands
+
 ```c
 // Dump all radio registers
 radio_common_dump_registers(&radio);
@@ -193,6 +203,7 @@ if (!radio_common_validate_config(&radio)) {
 ## Building
 
 ### Standalone Library
+
 ```bash
 mkdir build && cd build
 cmake ..
@@ -200,6 +211,7 @@ make
 ```
 
 ### ESP-IDF Component
+
 The library automatically detects ESP-IDF environment and registers as a component.
 
 ## Troubleshooting
@@ -207,21 +219,22 @@ The library automatically detects ESP-IDF environment and registers as a compone
 ### Common Issues
 
 **Radio not responding**
+
 - Check CE and CSN pin connections
 - Verify SPI wiring (MOSI, MISO, SCK)
 - Ensure power supply is stable (3.3V)
 
 **Communication failures**
+
 - Verify both devices use the same channel and address
 - Check for interference on the selected channel
 - Ensure payload sizes match on TX/RX
 
 **Range issues**
+
 - Check antenna connection
 - Verify power level settings
 - Consider adding repeater modules
-
-For development guidelines and contribution instructions, see [AGENTS.md](AGENTS.md).
 
 ## License
 

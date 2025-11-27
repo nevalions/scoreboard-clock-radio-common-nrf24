@@ -321,6 +321,11 @@ bool radio_common_validate_config(const RadioCommon* radio) {
 3. Review existing code and tests
 4. Discuss significant changes in issues first
 
+### Documentation Guidelines
+- **README.md**: Contains user-facing documentation and quick start guides
+- **AGENTS.md**: Contains development guidelines and internal documentation
+- **Important**: Do not reference or add AGENTS.md to README.md - this is an internal development document
+
 ### Pull Request Process
 1. Fork repository
 2. Create feature branch
