@@ -30,6 +30,11 @@ typedef enum {
 #endif
 
 // Logging macros (will be overridden by ESP-IDF when available)
+#if defined(ESP_IDF_VER) || defined(__ESP32__) || defined(ESP_PLATFORM)
+// ESP-IDF environment - use its logging macros
+#include "esp_log.h"
+#else
+// Non-ESP-IDF environment - define our own logging macros
 #ifndef ESP_LOGD
 #define ESP_LOGD(tag, format, ...) printf("[D] %s: " format "\n", tag, ##__VA_ARGS__)
 #endif
@@ -41,6 +46,7 @@ typedef enum {
 #endif
 #ifndef ESP_LOGW
 #define ESP_LOGW(tag, format, ...) printf("[W] %s: " format "\n", tag, ##__VA_ARGS__)
+#endif
 #endif
 
 // =============================================================================
