@@ -62,9 +62,17 @@ nrf24_write_register(&radio, NRF24_REG_CONFIG, RADIO_CONFIG_TX_MODE);
 
 ### Default Pinout
 
-- **SPI Interface**: SPI2 (MOSI: GPIO23, MISO: GPIO19, SCK: GPIO18)
+- **SPI Interface**: SPI3 (MOSI: GPIO23, MISO: GPIO19, SCK: GPIO18)
 - **Control Pins**: CE (GPIO5), CSN (GPIO4)
 - **Status LED**: GPIO2
+
+### SPI Configuration
+
+- **SPI Host**: SPI3_HOST (configurable in radio_config.h)
+- **Clock Speed**: 1 MHz (suitable for nRF24L01+)
+- **SPI Mode**: 0 (CPOL=0, CPHA=0)
+- **Bit Order**: MSB first
+- **CS Control**: Manual (CSN pin controlled by library)
 
 ### Radio Settings
 
@@ -165,15 +173,20 @@ typedef struct {
 
 ### ESP32 (Primary)
 
-Full support with ESP-IDF framework including SPI driver integration, GPIO control, FreeRTOS delays, and ESP logging system.
+Full support with ESP-IDF framework including:
+- SPI3 driver integration with DMA support
+- GPIO control for CE/CSN pins
+- FreeRTOS delays and timing
+- ESP logging system integration
+- Hardware abstraction for easy porting
 
 ### Other Platforms
 
 Generic platform support using weak symbols. Implement these functions:
 
-- `radio_common_platform_init()`
-- `radio_common_platform_transfer()`
-- `radio_common_delay_ms/us()`
+- `radio_common_platform_init()` - Platform-specific initialization
+- `radio_common_platform_transfer()` - SPI data transfer
+- `radio_common_delay_ms/us()` - Timing functions
 
 ## Debugging
 
