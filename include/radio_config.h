@@ -68,8 +68,8 @@ typedef enum { SPI1_HOST = 0, SPI2_HOST = 1, SPI3_HOST = 2 } spi_host_device_t;
 // =============================================================================
 
 // ESP32 GPIO pins for nRF24L01+
-#define RADIO_CE_PIN GPIO_NUM_5
-#define RADIO_CSN_PIN GPIO_NUM_4
+// #define RADIO_CE_PIN GPIO_NUM_5
+// #define RADIO_CSN_PIN GPIO_NUM_4
 
 // ESP32 SPI pins
 #define RADIO_SPI_HOST SPI3_HOST
