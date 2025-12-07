@@ -42,8 +42,8 @@ target_link_libraries(your_target radio_common)
 
 RadioCommon radio;
 
-// Initialize radio
-if (!radio_common_init(&radio, GPIO_NUM_5, GPIO_NUM_4)) {
+// Initialize radio with your desired pins
+if (!radio_common_init(&radio, YOUR_CE_PIN, YOUR_CSN_PIN)) {
     ESP_LOGE("APP", "Radio initialization failed");
     return;
 }
@@ -63,8 +63,10 @@ nrf24_write_register(&radio, NRF24_REG_CONFIG, RADIO_CONFIG_TX_MODE);
 ### Default Pinout
 
 - **SPI Interface**: SPI3 (MOSI: GPIO23, MISO: GPIO19, SCK: GPIO18)
-- **Control Pins**: CE (GPIO5), CSN (GPIO4)
+- **Control Pins**: CE and CSN pins (configured by application)
 - **Status LED**: GPIO2
+
+**Note**: The library no longer defines default CE/CSN pins. These must be configured by your application when calling `radio_common_init()`.
 
 ### SPI Configuration
 
