@@ -92,6 +92,11 @@ nrf24_write_register(&radio, NRF24_REG_CONFIG, RADIO_CONFIG_TX_MODE);
 
 ### Radio Settings
 
+> **This section is the canonical protocol reference for the whole system**
+> (together with `include/radio_config.h`, which is the code contract).
+> Other repos' docs summarize and link here — protocol values must not be
+> restated elsewhere, that's how docs drift.
+
 - **Channel**: 76 default; runtime-agile across `RADIO_CHANNEL_CANDIDATES` {76, 82, 78, 74, 49, 24} — controller surveys occupancy (RPD) and picks the quietest, receivers hop the list until they hear frames
 - **Data Rate**: 250 kbps (`RADIO_RF_SETUP` alias; fall back to 1 Mbps if clone modules fail at 250 kbps)
 - **Power Level**: 0 dBm
@@ -106,6 +111,15 @@ nrf24_write_register(&radio, NRF24_REG_CONFIG, RADIO_CONFIG_TX_MODE);
   255 null/clear; 256+d final-countdown deciseconds (d = 0-49, i.e. 4.9-0.1 s).
   Bit 15 flags "warn at 10 s" (football buzzer); receivers mask it off before
   interpreting the value
+- **Frame**: `time_high, time_low, color_r, color_g, color_b, sequence` — color is
+  decided controller-side (incl. day/dusk/night brightness scaling); the sequence
+  byte is shared across burst copies so receivers can log real tick loss
+- **Cadence**: 250 ms (4 Hz) while running, 3 identical copies per tick (burst
+  redundancy); forced immediate send on every value change, so ~10 Hz during the
+  final-5s tenths window
+- **Referee watch uplink**: separate radio path — encrypted ESP-NOW on WiFi
+  channel 6 (between nRF24 candidates 24 and 49); contract in
+  `include/espnow_link.h`
 
 ## Usage Examples
 
