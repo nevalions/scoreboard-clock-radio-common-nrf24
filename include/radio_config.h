@@ -59,9 +59,9 @@ typedef enum { SPI1_HOST = 0, SPI2_HOST = 1, SPI3_HOST = 2 } spi_host_device_t;
 #define RADIO_ADDRESS {0xE7, 0xE7, 0xE7, 0xE7, 0xE7}
 #define RADIO_PAYLOAD_SIZE 6
 
-// Radio performance settings
-#define RADIO_DATA_RATE_1MBPS 0x06 // RF_SETUP value for 1Mbps
-#define RADIO_POWER_0DBM 0x06      // RF_SETUP value for 0dBm
+// RF_SETUP register value: one combined write, not two settings.
+// Bits: RF_DR=0 (1 Mbps), RF_PWR=11 (0 dBm, max power)
+#define RADIO_RF_SETUP_1MBPS_0DBM 0x06
 
 // =============================================================================
 // HARDWARE CONFIGURATION

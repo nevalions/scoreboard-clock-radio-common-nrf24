@@ -303,7 +303,8 @@ bool radio_common_configure(RadioCommon *radio) {
     return false;
   }
 
-  if (!nrf24_write_register(radio, NRF24_REG_RF_SETUP, RADIO_DATA_RATE_1MBPS)) {
+  if (!nrf24_write_register(radio, NRF24_REG_RF_SETUP,
+                            RADIO_RF_SETUP_1MBPS_0DBM)) {
     ESP_LOGE(TAG, "Failed to set RF setup");
     return false;
   }
