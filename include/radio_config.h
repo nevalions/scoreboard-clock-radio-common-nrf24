@@ -77,6 +77,13 @@ typedef enum { SPI1_HOST = 0, SPI2_HOST = 1, SPI3_HOST = 2 } spi_host_device_t;
 #define RADIO_TIME_DECISECONDS(v)                                             \
   ((uint16_t)((v) - RADIO_TIME_DECISECONDS_BASE))
 
+// Bit 15 of the time field flags "warn at 10s": set by the controller for
+// sports whose rules call for a 10-second buzzer (football). Receivers
+// strip the flag before interpreting the value; the null sentinel is sent
+// without it
+#define RADIO_TIME_FLAG_WARN10 0x8000
+#define RADIO_TIME_VALUE_MASK 0x7FFF
+
 // RF_SETUP register values: one combined write, not two settings.
 // Bits: RF_DR_LOW=1, RF_DR_HIGH=0 (250 kbps), RF_PWR=11 (0 dBm, max power)
 #define RADIO_RF_SETUP_250KBPS_0DBM 0x26

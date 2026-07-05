@@ -103,7 +103,9 @@ nrf24_write_register(&radio, NRF24_REG_CONFIG, RADIO_CONFIG_TX_MODE);
 - **Retries**: Disabled (`SETUP_RETR` = 0x00) — fire-and-forget
 - **CRC**: 1-byte
 - **Time field encoding** (payload bytes 0-1, big-endian): 0-99 whole seconds;
-  255 null/clear; 256+d final-countdown deciseconds (d = 0-49, i.e. 4.9-0.1 s)
+  255 null/clear; 256+d final-countdown deciseconds (d = 0-49, i.e. 4.9-0.1 s).
+  Bit 15 flags "warn at 10 s" (football buzzer); receivers mask it off before
+  interpreting the value
 
 ## Usage Examples
 
