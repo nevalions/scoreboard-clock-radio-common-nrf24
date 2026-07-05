@@ -468,6 +468,16 @@ bool radio_common_is_connected(RadioCommon *radio) {
   return (read_back == 0x03);
 }
 
+bool radio_common_config_intact(RadioCommon *radio) {
+  if (!radio || !radio->initialized) {
+    return false;
+  }
+
+  // RF_CH resets to 0x02 on power-on-reset, so reading back the configured
+  // channel detects a chip that brown-out reset while the MCU stayed up
+  return nrf24_read_register(radio, NRF24_REG_RF_CH) == RADIO_CHANNEL;
+}
+
 bool radio_common_validate_config(RadioCommon *radio) {
   if (!radio || !radio->initialized) {
     ESP_LOGE(TAG, "Radio not initialized");

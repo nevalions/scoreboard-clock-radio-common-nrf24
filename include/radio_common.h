@@ -77,6 +77,11 @@ bool radio_common_is_connected(RadioCommon *radio);
 // Validate radio configuration
 bool radio_common_validate_config(RadioCommon *radio);
 
+// Canary check: true iff the chip still holds the configured channel.
+// Detects a brown-out reset nRF24 (reverted to power-on defaults) while
+// the MCU stayed up; callers should re-run radio_common_configure() on false
+bool radio_common_config_intact(RadioCommon *radio);
+
 // =============================================================================
 // PLATFORM-SPECIFIC FUNCTIONS
 // =============================================================================
