@@ -22,17 +22,31 @@ This library provides a common interface for nRF24L01+ radio communication acros
 
 ### Installation
 
-Add as Git submodule to your ESP-IDF project:
+Add as a Git submodule alongside your ESP-IDF project's `main/` directory:
 
 ```bash
 git submodule add https://github.com/nevalions/scoreboard-clock-radio-common-nrf24.git radio-common
 ```
 
-Update your `CMakeLists.txt`:
+This is an ESP-IDF component only (`idf_component_register` in `radio-common/CMakeLists.txt`) —
+there is no standalone/generic CMake target to `add_subdirectory()`/`target_link_libraries()`
+against. Point ESP-IDF at the component directory in your project's top-level
+`CMakeLists.txt`:
 
 ```cmake
-add_subdirectory(radio-common)
-target_link_libraries(your_target radio_common)
+set(EXTRA_COMPONENT_DIRS ../radio-common)
+include($ENV{IDF_PATH}/tools/cmake/project.cmake)
+project(your_project)
+```
+
+Then require it from your `main/CMakeLists.txt`:
+
+```cmake
+idf_component_register(
+    SRCS "main.c"
+    INCLUDE_DIRS "."
+    REQUIRES radio-common
+)
 ```
 
 ### Basic Usage
@@ -78,20 +92,22 @@ nrf24_write_register(&radio, NRF24_REG_CONFIG, RADIO_CONFIG_TX_MODE);
 
 ### Radio Settings
 
-- **Channel**: 76 (2.476 GHz)
+- **Channel**: 20 (2.420 GHz)
 - **Data Rate**: 1 Mbps
 - **Power Level**: 0 dBm
 - **Network Address**: 0xE7E7E7E7E7
-- **Payload Size**: 32 bytes
-- **Auto-ACK**: Enabled
-- **Retries**: Up to 3, 750µs delay
+- **Payload Size**: 6 bytes, fixed (`RADIO_PAYLOAD_SIZE`) — dynamic payloads (DYNPD/FEATURE)
+  are never enabled
+- **Auto-ACK**: Enabled on pipe 0 only
+- **Retries**: `SETUP_RETR` = 0x4F → 1250µs auto-retransmit delay (ARD), 15 retries (ARC)
+- **CRC**: 1-byte
 
 ## Usage Examples
 
 ### Sending Data
 
 ```c
-uint8_t payload[32] = { /* your data */ };
+uint8_t payload[RADIO_PAYLOAD_SIZE] = { /* your 6 bytes of data */ };
 
 // Write payload to TX buffer
 nrf24_write_payload(&radio, payload, sizeof(payload));
@@ -111,7 +127,7 @@ gpio_write(radio.ce_pin, 1);
 
 // Check for received data
 if (nrf24_get_status(&radio) & NRF24_STATUS_RX_DR) {
-    uint8_t payload[32];
+    uint8_t payload[RADIO_PAYLOAD_SIZE];
     nrf24_read_payload(&radio, payload, sizeof(payload));
 
     // Process received data...
@@ -182,9 +198,11 @@ Full support with ESP-IDF framework including:
 - ESP logging system integration
 - Hardware abstraction for easy porting
 
-### Other Platforms
+### Other Platforms (unused/untested)
 
-Generic platform support using weak symbols. Implement these functions:
+A generic, non-ESP32 code path exists in `src/radio_common.c` behind weak symbols, but it is
+currently unused and untested — nothing in this repo builds or exercises it. Implementing
+support would mean providing these weak symbols:
 
 - `radio_common_platform_init()` - Platform-specific initialization
 - `radio_common_platform_transfer()` - SPI data transfer
@@ -217,17 +235,19 @@ if (!radio_common_validate_config(&radio)) {
 
 ## Building
 
-### Standalone Library
+### ESP-IDF Component (only supported build)
 
-```bash
-mkdir build && cd build
-cmake ..
-make
-```
+This module is an ESP-IDF component only (`idf_component_register` in `CMakeLists.txt`).
+There is no standalone CMake build target and no test suite. It is consumed by adding it as
+a component directory inside an ESP-IDF project; ESP-IDF's own build system registers and
+builds it automatically.
 
-### ESP-IDF Component
+### Standalone Library (planned / not implemented)
 
-The library automatically detects ESP-IDF environment and registers as a component.
+A standalone (non-ESP-IDF) CMake build is not currently provided. The non-ESP32 code path
+(`radio_common_platform_init`, `radio_common_platform_transfer`, etc., guarded by weak
+symbols) exists in `src/radio_common.c` for future portability but is currently unused and
+untested — no build wires it up, and there is no test suite exercising it.
 
 ## Troubleshooting
 

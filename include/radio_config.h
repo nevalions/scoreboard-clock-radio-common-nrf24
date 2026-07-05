@@ -67,9 +67,8 @@ typedef enum { SPI1_HOST = 0, SPI2_HOST = 1, SPI3_HOST = 2 } spi_host_device_t;
 // HARDWARE CONFIGURATION
 // =============================================================================
 
-// ESP32 GPIO pins for nRF24L01+
-// #define RADIO_CE_PIN GPIO_NUM_5
-// #define RADIO_CSN_PIN GPIO_NUM_4
+// nRF24L01+ CE/CSN pins are application-specific: each module defines its
+// own and passes them to radio_common_init()
 
 // ESP32 SPI pins
 #define RADIO_SPI_HOST SPI3_HOST

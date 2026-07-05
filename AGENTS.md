@@ -15,35 +15,24 @@ This document contains comprehensive development guidelines, coding standards, a
 
 ## Build System
 
-### Standard Build
-```bash
-mkdir build && cd build
-cmake ..
-make
-```
+This module is an ESP-IDF component only: `CMakeLists.txt` is a single
+`idf_component_register(...)` call (`SRCS "src/radio_common.c"`, `INCLUDE_DIRS "include"`).
+There is **no standalone CMake build** (no plain `cmake .. && make` target), **no
+`ENABLE_TESTING`/`ctest` build**, and **no test suite** in this repo — any instructions
+implying otherwise are aspirational/planned, not implemented.
 
-### Debug Build
-```bash
-mkdir build && cd build
-cmake -DCMAKE_BUILD_TYPE=Debug ..
-make
-```
-
-### Test Build
-```bash
-mkdir build && cd build
-cmake -DENABLE_TESTING=ON ..
-make
-ctest
-```
+### ESP-IDF Integration (only supported build)
+Consuming projects add this directory via `EXTRA_COMPONENT_DIRS` (see `repeater/CMakeLists.txt`
+for a working example) and `REQUIRES radio-common` in their component's
+`idf_component_register()`. ESP-IDF's build system then builds it as a component
+automatically — no manual `add_subdirectory`/`target_link_libraries` step.
 
 ### Clean Build
 ```bash
-rm -rf build
+idf.py fullclean
 ```
-
-### ESP-IDF Integration
-The library automatically detects ESP-IDF environment and registers as a component. No additional configuration needed.
+(run from the consuming ESP-IDF project; this component has no independent build directory
+of its own)
 
 ## Code Style Guidelines
 
@@ -99,18 +88,17 @@ bool radio_common_init(RadioCommon* radio, gpio_num_t ce_pin, gpio_num_t csn_pin
 
 2. **Install Dependencies**
    ```bash
-   # Ubuntu/Debian
-   sudo apt-get install cmake build-essential
-   
-   # ESP-IDF (if developing for ESP32)
-   # Follow ESP-IDF installation guide
+   # ESP-IDF is required — there is no non-ESP-IDF build path
+   # Follow the ESP-IDF installation guide
    ```
 
 3. **Initial Build**
+
+   Build via a consuming ESP-IDF project (e.g. `repeater/`), which points
+   `EXTRA_COMPONENT_DIRS` at this directory:
    ```bash
-   mkdir build && cd build
-   cmake ..
-   make
+   cd ../repeater   # or another module that depends on radio-common
+   idf.py build
    ```
 
 ### Making Changes
@@ -126,9 +114,12 @@ bool radio_common_init(RadioCommon* radio, gpio_num_t ce_pin, gpio_num_t csn_pin
    - Update documentation
 
 3. **Test Changes**
+
+   No automated test suite exists (see Testing Guidelines). Verify by building a
+   consuming ESP-IDF module and checking behavior on real hardware:
    ```bash
-   make
-   ctest  # if tests are available
+   cd ../repeater   # or another module that depends on radio-common
+   idf.py build flash monitor
    ```
 
 4. **Commit Changes**
@@ -148,41 +139,31 @@ Use conventional commits format:
 - `test:` Adding or updating tests
 - `chore:` Maintenance tasks
 
-## Testing Guidelines
+## Testing Guidelines (planned / not implemented)
 
-### Unit Tests
+There is currently **no automated test suite** for this module — no Unity tests, no `ctest`
+target, nothing under a `test/` directory. The guidelines below describe an aspirational
+testing approach for future work, not anything that exists in the repo today.
+
+### Unit Tests (not implemented)
 - Test all public functions
 - Test error conditions and edge cases
 - Use consistent test naming: `test_function_name_scenario`
 
-### Integration Tests
+### Integration Tests (not implemented)
 - Test with actual hardware when possible
 - Validate radio communication between devices
 - Test platform-specific functionality
 
 ### Validation Checklist
 - [ ] Code compiles without warnings
-- [ ] All tests pass
-- [ ] Static analysis passes (if configured)
 - [ ] Documentation is updated
 - [ ] Hardware validation (if applicable)
 
-### Test Structure
-```c
-void test_radio_common_init_success(void) {
-    RadioCommon radio;
-    
-    // Test successful initialization
-    TEST_ASSERT_TRUE(radio_common_init(&radio, GPIO_NUM_5, GPIO_NUM_4));
-    TEST_ASSERT_EQUAL(GPIO_NUM_5, radio.ce_pin);
-    TEST_ASSERT_EQUAL(GPIO_NUM_4, radio.csn_pin);
-}
-
-void test_radio_common_init_null_pointer(void) {
-    // Test null pointer handling
-    TEST_ASSERT_FALSE(radio_common_init(NULL, GPIO_NUM_5, GPIO_NUM_4));
-}
-```
+### Manual Verification (current practice)
+In the absence of automated tests, changes are currently verified by building the consuming
+ESP-IDF module (e.g. `repeater`, `controller`) and checking behavior via serial monitor /
+`radio_common_dump_registers()` against real hardware.
 
 ## Platform Support
 
@@ -193,25 +174,30 @@ void test_radio_common_init_null_pointer(void) {
 - **Logging**: ESP_LOG macros
 - **Delays**: FreeRTOS delays
 
-### Generic Platform Support
-Implement weak symbols for platform abstraction:
+### Generic Platform Support (unused/untested)
+`src/radio_common.c` defines weak-symbol default implementations for the non-ESP32 path, but
+nothing in this repo currently overrides or exercises them — they exist for future
+portability only. The actual weak symbols, matching `include/radio_common.h`, are:
 
 ```c
-__attribute__((weak)) bool radio_common_platform_init(RadioCommon* radio) {
+__attribute__((weak)) bool radio_common_platform_init(RadioCommon *radio) {
     // Default implementation - should be overridden
     return false;
 }
 
-__attribute__((weak)) bool radio_common_platform_transfer(
-    RadioCommon* radio, const uint8_t* tx_data, uint8_t* rx_data, size_t length) {
-    // Default implementation - should be overridden
-    return false;
+__attribute__((weak)) uint8_t radio_common_platform_transfer(RadioCommon *radio,
+                                                              uint8_t data) {
+    // Default implementation - should be overridden; single byte in, single byte out
+    return 0xFF;
 }
+
+__attribute__((weak)) void radio_common_delay_ms(uint32_t ms) { /* ... */ }
+__attribute__((weak)) void radio_common_delay_us(uint32_t us) { /* ... */ }
 ```
 
 ### Adding New Platform Support
 1. Implement required weak symbols
-2. Add platform-specific tests
+2. Add platform-specific tests (no test infrastructure exists yet — see Testing Guidelines)
 3. Update documentation
 4. Add build configuration options
 
@@ -263,25 +249,38 @@ void radio_common_dump_registers(const RadioCommon* radio) {
 ```
 
 ### Validation Functions
+The real `radio_common_validate_config()` (in `src/radio_common.c`) checks TX/RX addresses
+are non-zero, the configured channel is ≤125, and the address width register holds a valid
+value (0x01-0x03, i.e. 3-5 bytes) — it does not check power state or data rate:
+
 ```c
-bool radio_common_validate_config(const RadioCommon* radio) {
-    // Validate critical settings
-    uint8_t config = nrf24_read_register(radio, NRF24_REG_CONFIG);
-    uint8_t rf_setup = nrf24_read_register(radio, NRF24_REG_RF_SETUP);
-    
-    // Check power state
-    if (!(config & NRF24_CONFIG_PWR_UP)) {
-        ESP_LOGE(TAG, "Radio not powered up");
+bool radio_common_validate_config(RadioCommon *radio) {
+    if (!radio || !radio->initialized) {
+        ESP_LOGE(TAG, "Radio not initialized");
         return false;
     }
-    
-    // Check data rate
-    uint8_t data_rate = rf_setup & NRF24_RF_SETUP_RF_DR;
-    if (data_rate != RADIO_DATA_RATE_1MBPS) {
-        ESP_LOGE(TAG, "Invalid data rate: 0x%02X", data_rate);
+
+    if (!RADIO_ADDRESS_IS_VALID(radio->tx_address)) {
+        ESP_LOGE(TAG, "Invalid TX address");
         return false;
     }
-    
+    if (!RADIO_ADDRESS_IS_VALID(radio->rx_address)) {
+        ESP_LOGE(TAG, "Invalid RX address");
+        return false;
+    }
+
+    uint8_t channel = nrf24_read_register(radio, NRF24_REG_RF_CH);
+    if (channel > 125) {
+        ESP_LOGE(TAG, "Invalid channel: %d", channel);
+        return false;
+    }
+
+    uint8_t addr_width = nrf24_read_register(radio, NRF24_REG_SETUP_AW);
+    if (addr_width < 0x01 || addr_width > 0x03) {
+        ESP_LOGE(TAG, "Invalid address width: %d", addr_width + 2);
+        return false;
+    }
+
     return true;
 }
 ```

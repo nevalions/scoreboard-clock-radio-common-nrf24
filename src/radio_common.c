@@ -13,11 +13,12 @@ static const char *TAG = "RADIO_COMMON";
 // =============================================================================
 
 #if defined(ESP_PLATFORM) || defined(ESP32) || defined(CONFIG_IDF_TARGET_ESP32)
-// ESP32 specific SPI implementation
-static uint8_t spi_transfer(RadioCommon *radio, uint8_t data) {
+// ESP32 specific SPI implementation. Returns false on SPI failure;
+// received byte is stored in *rx_out (may be NULL).
+static bool spi_transfer(RadioCommon *radio, uint8_t data, uint8_t *rx_out) {
   if (!radio->spi) {
     ESP_LOGE(TAG, "SPI device handle is NULL!");
-    return 0xFF;
+    return false;
   }
 
   uint8_t rx_data;
@@ -27,11 +28,13 @@ static uint8_t spi_transfer(RadioCommon *radio, uint8_t data) {
   esp_err_t ret = spi_device_transmit((spi_device_handle_t)radio->spi, &trans);
   if (ret != ESP_OK) {
     ESP_LOGE(TAG, "SPI transfer failed: %s", esp_err_to_name(ret));
-    return 0xFF;
+    return false;
   }
 
   RADIO_DEBUG_LOG(TAG, "SPI TX: 0x%02X, RX: 0x%02X", data, rx_data);
-  return rx_data;
+  if (rx_out)
+    *rx_out = rx_data;
+  return true;
 }
 
 static void gpio_write(gpio_num_t pin, bool level) {
@@ -66,8 +69,11 @@ __attribute__((weak)) void radio_common_delay_us(uint32_t us) {
 }
 
 // Use generic implementations
-static uint8_t spi_transfer(RadioCommon *radio, uint8_t data) {
-  return radio_common_platform_transfer(radio, data);
+static bool spi_transfer(RadioCommon *radio, uint8_t data, uint8_t *rx_out) {
+  uint8_t rx = radio_common_platform_transfer(radio, data);
+  if (rx_out)
+    *rx_out = rx;
+  return true;
 }
 
 static void gpio_write(gpio_num_t pin, bool level) {
@@ -85,29 +91,41 @@ static void delay_us(uint32_t us) { radio_common_delay_us(us); }
 // LOW-LEVEL RADIO FUNCTIONS
 // =============================================================================
 
+// Execute one CSN-framed SPI command: send cmd, then shift len bytes.
+// Bytes come from tx (or NOP filler when tx is NULL) and land in rx when
+// rx is non-NULL. The status byte returned by the command phase is stored
+// in *status_out when non-NULL. Returns false if any SPI transfer failed.
+static bool spi_cmd(RadioCommon *radio, uint8_t cmd, const uint8_t *tx,
+                    uint8_t *rx, uint8_t len, uint8_t *status_out) {
+  if (!radio || !radio->initialized)
+    return false;
+
+  bool ok;
+  gpio_write(radio->csn_pin, 0);
+  ok = spi_transfer(radio, cmd, status_out);
+  for (uint8_t i = 0; ok && i < len; i++) {
+    uint8_t out = tx ? tx[i] : NRF24_CMD_NOP;
+    ok = spi_transfer(radio, out, rx ? &rx[i] : NULL);
+  }
+  gpio_write(radio->csn_pin, 1);
+  return ok;
+}
+
 uint8_t nrf24_read_register(RadioCommon *radio, uint8_t reg) {
-  if (!radio || !radio->initialized) {
+  uint8_t value = 0xFF;
+  if (!spi_cmd(radio, NRF24_CMD_R_REGISTER | reg, NULL, &value, 1, NULL)) {
     return 0xFF;
   }
-
-  gpio_write(radio->csn_pin, 0);
-  spi_transfer(radio, NRF24_CMD_R_REGISTER | reg);
-  uint8_t value = spi_transfer(radio, NRF24_CMD_NOP);
-  gpio_write(radio->csn_pin, 1);
 
   RADIO_DEBUG_LOG(TAG, "Read register 0x%02X = 0x%02X", reg, value);
   return value;
 }
 
 bool nrf24_write_register(RadioCommon *radio, uint8_t reg, uint8_t value) {
-  if (!radio || !radio->initialized) {
+  uint8_t status = 0;
+  if (!spi_cmd(radio, NRF24_CMD_W_REGISTER | reg, &value, NULL, 1, &status)) {
     return false;
   }
-
-  gpio_write(radio->csn_pin, 0);
-  uint8_t status = spi_transfer(radio, NRF24_CMD_W_REGISTER | reg);
-  spi_transfer(radio, value);
-  gpio_write(radio->csn_pin, 1);
 
   RADIO_DEBUG_LOG(TAG, "Write register 0x%02X = 0x%02X, status = 0x%02X", reg,
                   value, status);
@@ -115,14 +133,10 @@ bool nrf24_write_register(RadioCommon *radio, uint8_t reg, uint8_t value) {
 }
 
 uint8_t nrf24_get_status(RadioCommon *radio) {
-  if (!radio || !radio->initialized) {
+  uint8_t status = 0xFF;
+  if (!spi_cmd(radio, NRF24_CMD_NOP, NULL, NULL, 0, &status)) {
     return 0xFF;
   }
-
-  gpio_write(radio->csn_pin, 0);
-  uint8_t status = spi_transfer(radio, NRF24_CMD_NOP);
-  gpio_write(radio->csn_pin, 1);
-
   return status;
 }
 
@@ -144,55 +158,31 @@ void nrf24_power_down(RadioCommon *radio) {
 }
 
 bool nrf24_read_payload(RadioCommon *radio, uint8_t *data, uint8_t length) {
-  if (!radio || !radio->initialized || !data || length == 0) {
+  if (!data || length == 0) {
     return false;
   }
 
-  gpio_write(radio->csn_pin, 0);
-  spi_transfer(radio, NRF24_CMD_RX_PAYLOAD);
-  for (uint8_t i = 0; i < length; i++) {
-    data[i] = spi_transfer(radio, NRF24_CMD_NOP);
-  }
-  gpio_write(radio->csn_pin, 1);
-
-  return true;
+  return spi_cmd(radio, NRF24_CMD_RX_PAYLOAD, NULL, data, length, NULL);
 }
 
 bool nrf24_write_payload(RadioCommon *radio, uint8_t *data, uint8_t length) {
-  if (!radio || !radio->initialized || !data || length == 0) {
+  if (!data || length == 0) {
     return false;
   }
 
-  gpio_write(radio->csn_pin, 0);
-  spi_transfer(radio, NRF24_CMD_TX_PAYLOAD);
-  for (uint8_t i = 0; i < length; i++) {
-    spi_transfer(radio, data[i]);
-  }
-  gpio_write(radio->csn_pin, 1);
-
-  return true;
+  return spi_cmd(radio, NRF24_CMD_TX_PAYLOAD, data, NULL, length, NULL);
 }
 
 void nrf24_flush_rx(RadioCommon *radio) {
-  if (!radio || !radio->initialized)
-    return;
-
-  gpio_write(radio->csn_pin, 0);
-  spi_transfer(radio, NRF24_CMD_FLUSH_RX);
-  gpio_write(radio->csn_pin, 1);
-
-  RADIO_DEBUG_LOG(TAG, "RX buffer flushed");
+  if (spi_cmd(radio, NRF24_CMD_FLUSH_RX, NULL, NULL, 0, NULL)) {
+    RADIO_DEBUG_LOG(TAG, "RX buffer flushed");
+  }
 }
 
 void nrf24_flush_tx(RadioCommon *radio) {
-  if (!radio || !radio->initialized)
-    return;
-
-  gpio_write(radio->csn_pin, 0);
-  spi_transfer(radio, NRF24_CMD_FLUSH_TX);
-  gpio_write(radio->csn_pin, 1);
-
-  RADIO_DEBUG_LOG(TAG, "TX buffer flushed");
+  if (spi_cmd(radio, NRF24_CMD_FLUSH_TX, NULL, NULL, 0, NULL)) {
+    RADIO_DEBUG_LOG(TAG, "TX buffer flushed");
+  }
 }
 
 // =============================================================================
@@ -375,21 +365,14 @@ bool radio_common_set_addresses(RadioCommon *radio, const uint8_t *tx_addr,
   memcpy(radio->tx_address, tx_addr, 5);
   memcpy(radio->rx_address, rx_addr, 5);
 
-  // Set TX address
-  gpio_write(radio->csn_pin, 0);
-  spi_transfer(radio, NRF24_CMD_W_REGISTER | NRF24_REG_TX_ADDR);
-  for (int i = 0; i < 5; i++) {
-    spi_transfer(radio, tx_addr[i]);
+  // Set TX address and RX address P0 (required for auto-ACK)
+  if (!spi_cmd(radio, NRF24_CMD_W_REGISTER | NRF24_REG_TX_ADDR, tx_addr, NULL,
+               5, NULL) ||
+      !spi_cmd(radio, NRF24_CMD_W_REGISTER | NRF24_REG_RX_ADDR_P0, rx_addr,
+               NULL, 5, NULL)) {
+    ESP_LOGE(TAG, "Failed to set addresses over SPI");
+    return false;
   }
-  gpio_write(radio->csn_pin, 1);
-
-  // Set RX address P0 (required for auto-ACK)
-  gpio_write(radio->csn_pin, 0);
-  spi_transfer(radio, NRF24_CMD_W_REGISTER | NRF24_REG_RX_ADDR_P0);
-  for (int i = 0; i < 5; i++) {
-    spi_transfer(radio, rx_addr[i]);
-  }
-  gpio_write(radio->csn_pin, 1);
 
   ESP_LOGI(TAG, "Addresses set successfully");
   return true;
@@ -445,13 +428,9 @@ void radio_common_dump_registers(RadioCommon *radio) {
   ESP_LOGI(TAG, "FIFO_STATUS: 0x%02X", fifo_status);
 
   // Read addresses
-  uint8_t tx_addr[5];
-  gpio_write(radio->csn_pin, 0);
-  spi_transfer(radio, NRF24_CMD_R_REGISTER | NRF24_REG_TX_ADDR);
-  for (int i = 0; i < 5; i++) {
-    tx_addr[i] = spi_transfer(radio, NRF24_CMD_NOP);
-  }
-  gpio_write(radio->csn_pin, 1);
+  uint8_t tx_addr[5] = {0};
+  spi_cmd(radio, NRF24_CMD_R_REGISTER | NRF24_REG_TX_ADDR, NULL, tx_addr, 5,
+          NULL);
 
   ESP_LOGI(TAG, "TX_ADDR:   %02X:%02X:%02X:%02X:%02X", tx_addr[0], tx_addr[1],
            tx_addr[2], tx_addr[3], tx_addr[4]);

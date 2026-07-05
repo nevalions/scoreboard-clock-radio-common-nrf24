@@ -44,8 +44,6 @@ void nrf24_power_down(RadioCommon *radio);
 // Payload operations
 bool nrf24_read_payload(RadioCommon *radio, uint8_t *data, uint8_t length);
 bool nrf24_write_payload(RadioCommon *radio, uint8_t *data, uint8_t length);
-bool nrf24_write_ack_payload(RadioCommon *radio, uint8_t pipe,
-                             const uint8_t *data, uint8_t length);
 
 // Buffer management
 void nrf24_flush_rx(RadioCommon *radio);
