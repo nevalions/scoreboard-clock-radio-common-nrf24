@@ -71,6 +71,10 @@ typedef enum { SPI1_HOST = 0, SPI2_HOST = 1, SPI3_HOST = 2 } spi_host_device_t;
 #define RADIO_CHANNEL_CANDIDATES {76, 82, 78, 74, 49, 24}
 #define RADIO_CHANNEL_CANDIDATE_COUNT 6
 
+// RPD samples per channel in an occupancy survey (1ms apart: ~40ms/channel,
+// ~250ms for the full candidate list)
+#define RADIO_SURVEY_SAMPLES 40
+
 // Time field encoding (16-bit big-endian in payload bytes 0-1):
 //   0-99    whole seconds
 //   255     null/clear sentinel (display off)
