@@ -92,8 +92,8 @@ nrf24_write_register(&radio, NRF24_REG_CONFIG, RADIO_CONFIG_TX_MODE);
 
 ### Radio Settings
 
-- **Channel**: 20 (2.420 GHz)
-- **Data Rate**: 1 Mbps
+- **Channel**: 76 (2.476 GHz — above WiFi ch 11, below the BLE advertising channel at 2480 MHz)
+- **Data Rate**: 250 kbps (`RADIO_RF_SETUP` alias; fall back to 1 Mbps if clone modules fail at 250 kbps)
 - **Power Level**: 0 dBm
 - **Network Address**: 0xE7E7E7E7E7
 - **Payload Size**: 6 bytes, fixed (`RADIO_PAYLOAD_SIZE`) — dynamic payloads (DYNPD/FEATURE)

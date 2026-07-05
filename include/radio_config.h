@@ -55,13 +55,24 @@ typedef enum { SPI1_HOST = 0, SPI2_HOST = 1, SPI3_HOST = 2 } spi_host_device_t;
 // =============================================================================
 
 // Radio network settings
-#define RADIO_CHANNEL 20
+// Channel 76 = 2476 MHz: above WiFi channel 11's occupied band (tops out at
+// 2473 MHz) and below the BLE advertising channel at 2480 MHz. The previous
+// channel 20 (2420 MHz) sat inside WiFi channel 1's occupied bandwidth.
+#define RADIO_CHANNEL 76
 #define RADIO_ADDRESS {0xE7, 0xE7, 0xE7, 0xE7, 0xE7}
 #define RADIO_PAYLOAD_SIZE 6
 
-// RF_SETUP register value: one combined write, not two settings.
-// Bits: RF_DR=0 (1 Mbps), RF_PWR=11 (0 dBm, max power)
+// RF_SETUP register values: one combined write, not two settings.
+// Bits: RF_DR_LOW=1, RF_DR_HIGH=0 (250 kbps), RF_PWR=11 (0 dBm, max power)
+#define RADIO_RF_SETUP_250KBPS_0DBM 0x26
+// Bits: RF_DR_LOW=0, RF_DR_HIGH=0 (1 Mbps), RF_PWR=11 (0 dBm, max power)
 #define RADIO_RF_SETUP_1MBPS_0DBM 0x06
+
+// Active RF_SETUP: 250 kbps buys ~9 dB of receiver sensitivity (-94 vs
+// -85 dBm) — the cheapest range margin available. Counterfeit nRF24 clones
+// sometimes fail at 250 kbps: if the bench link is dead after flashing,
+// point this alias back at RADIO_RF_SETUP_1MBPS_0DBM.
+#define RADIO_RF_SETUP RADIO_RF_SETUP_250KBPS_0DBM
 
 // =============================================================================
 // HARDWARE CONFIGURATION
@@ -146,6 +157,7 @@ typedef enum { SPI1_HOST = 0, SPI2_HOST = 1, SPI3_HOST = 2 } spi_host_device_t;
 #define NRF24_STATUS_MAX_RT 0x10
 
 // RF_SETUP register bits
+#define NRF24_RF_SETUP_RF_DR_LOW 0x20
 #define NRF24_RF_SETUP_PLL_LOCK 0x10
 #define NRF24_RF_SETUP_RF_DR 0x08
 #define NRF24_RF_SETUP_RF_PWR 0x06
