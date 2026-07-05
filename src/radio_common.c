@@ -318,8 +318,8 @@ bool radio_common_configure(RadioCommon *radio) {
     return false;
   }
 
-  if (!nrf24_write_register(radio, NRF24_REG_EN_AA, RADIO_EN_AA_PIPE0)) {
-    ESP_LOGE(TAG, "Failed to enable auto-ACK");
+  if (!nrf24_write_register(radio, NRF24_REG_EN_AA, RADIO_EN_AA_NONE)) {
+    ESP_LOGE(TAG, "Failed to disable auto-ACK");
     return false;
   }
 
@@ -365,7 +365,7 @@ bool radio_common_set_addresses(RadioCommon *radio, const uint8_t *tx_addr,
   memcpy(radio->tx_address, tx_addr, 5);
   memcpy(radio->rx_address, rx_addr, 5);
 
-  // Set TX address and RX address P0 (required for auto-ACK)
+  // Set TX address and RX address P0 (receivers listen on pipe 0)
   if (!spi_cmd(radio, NRF24_CMD_W_REGISTER | NRF24_REG_TX_ADDR, tx_addr, NULL,
                5, NULL) ||
       !spi_cmd(radio, NRF24_CMD_W_REGISTER | NRF24_REG_RX_ADDR_P0, rx_addr,

@@ -168,14 +168,15 @@ typedef enum { SPI1_HOST = 0, SPI2_HOST = 1, SPI3_HOST = 2 } spi_host_device_t;
 #define RADIO_CONFIG_RX_MODE                                                   \
   (RADIO_CONFIG_CRC_ENABLED | NRF24_CONFIG_PWR_UP | NRF24_CONFIG_PRIM_RX)
 
-// Auto retransmission settings (500us delay, up to 15 retries)
-#define RADIO_SETUP_RETR 0x4F
+// Auto retransmission disabled: this is a broadcast protocol — multiple
+// receivers share one address, so ACKs would collide and retries buy nothing
+#define RADIO_SETUP_RETR 0x00
 
 // Address width (5 bytes)
 #define RADIO_SETUP_AW 0x03
 
-// Enable auto-acknowledgment on pipe 0
-#define RADIO_EN_AA_PIPE0 0x01
+// Auto-ACK disabled on all pipes (broadcast; see RADIO_SETUP_RETR note)
+#define RADIO_EN_AA_NONE 0x00
 
 // Enable pipe 0
 #define RADIO_EN_RXADDR_PIPE0 0x01
