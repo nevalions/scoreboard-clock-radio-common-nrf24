@@ -92,7 +92,7 @@ nrf24_write_register(&radio, NRF24_REG_CONFIG, RADIO_CONFIG_TX_MODE);
 
 ### Radio Settings
 
-- **Channel**: 76 (2.476 GHz — above WiFi ch 11, below the BLE advertising channel at 2480 MHz)
+- **Channel**: 76 default; runtime-agile across `RADIO_CHANNEL_CANDIDATES` {76, 82, 78, 74, 49, 24} — controller surveys occupancy (RPD) and picks the quietest, receivers hop the list until they hear frames
 - **Data Rate**: 250 kbps (`RADIO_RF_SETUP` alias; fall back to 1 Mbps if clone modules fail at 250 kbps)
 - **Power Level**: 0 dBm
 - **Network Address**: 0xE7E7E7E7E7

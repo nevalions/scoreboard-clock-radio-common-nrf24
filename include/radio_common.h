@@ -24,6 +24,12 @@ typedef struct {
   uint8_t tx_address[5];
   uint8_t rx_address[5];
 
+  // Active RF channel: RADIO_CHANNEL at init, changed at runtime by
+  // radio_common_set_channel (venue channel agility). configure() and the
+  // config_intact canary both use this, so self-healing preserves a
+  // runtime-selected channel
+  uint8_t channel;
+
   // SPI device handle (always included for ESP32)
   void *spi;
 } RadioCommon;
@@ -81,6 +87,17 @@ bool radio_common_validate_config(RadioCommon *radio);
 // Detects a brown-out reset nRF24 (reverted to power-on defaults) while
 // the MCU stayed up; callers should re-run radio_common_configure() on false
 bool radio_common_config_intact(RadioCommon *radio);
+
+// Switch RF channel at runtime. Pulls CE low (standby) and leaves it low -
+// the caller re-enters RX (radio_start_listening) or TX as needed
+bool radio_common_set_channel(RadioCommon *radio, uint8_t channel);
+
+// Occupancy survey: sit in RX on `channel` and sample the carrier-detect
+// register (RPD, >= -64 dBm) once per ms; returns the number of busy
+// samples (0..samples). Leaves the radio in standby on `channel` - the
+// caller restores its channel and mode afterwards
+uint16_t radio_common_survey_channel(RadioCommon *radio, uint8_t channel,
+                                     uint16_t samples);
 
 // =============================================================================
 // PLATFORM-SPECIFIC FUNCTIONS

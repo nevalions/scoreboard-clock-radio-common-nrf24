@@ -62,6 +62,15 @@ typedef enum { SPI1_HOST = 0, SPI2_HOST = 1, SPI3_HOST = 2 } spi_host_device_t;
 #define RADIO_ADDRESS {0xE7, 0xE7, 0xE7, 0xE7, 0xE7}
 #define RADIO_PAYLOAD_SIZE 6
 
+// Channel candidates for venue agility. The controller surveys these (RPD)
+// and picks the quietest; receivers hop through the list until they hear
+// frames. First entry must equal RADIO_CHANNEL (the boot default).
+// Chosen to dodge the WiFi 1/6/11 lobes and the BLE advertising channels
+// (2402/2426/2480 MHz): 76/82/78/74 above WiFi ch 11, 49 in the 6-11 gap,
+// 24 in the 1-6 gap
+#define RADIO_CHANNEL_CANDIDATES {76, 82, 78, 74, 49, 24}
+#define RADIO_CHANNEL_CANDIDATE_COUNT 6
+
 // Time field encoding (16-bit big-endian in payload bytes 0-1):
 //   0-99    whole seconds
 //   255     null/clear sentinel (display off)

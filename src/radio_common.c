@@ -248,6 +248,8 @@ bool radio_common_init(RadioCommon *radio, gpio_num_t ce_pin,
   memcpy(radio->tx_address, default_addr, 5);
   memcpy(radio->rx_address, default_addr, 5);
 
+  radio->channel = RADIO_CHANNEL;
+
 #if defined(ESP_PLATFORM) || defined(ESP32) || defined(CONFIG_IDF_TARGET_ESP32)
   // Initialize GPIO pins
   gpio_config_t io_conf = {.pin_bit_mask = (1ULL << ce_pin) | (1ULL << csn_pin),
@@ -297,8 +299,9 @@ bool radio_common_configure(RadioCommon *radio) {
   nrf24_write_register(radio, NRF24_REG_CONFIG, 0);
   delay_ms(10);
 
-  // Configure basic settings
-  if (!nrf24_write_register(radio, NRF24_REG_RF_CH, RADIO_CHANNEL)) {
+  // Configure basic settings (channel is the runtime-selected one, so
+  // self-heal reconfiguration preserves a venue channel choice)
+  if (!nrf24_write_register(radio, NRF24_REG_RF_CH, radio->channel)) {
     ESP_LOGE(TAG, "Failed to set channel");
     return false;
   }
@@ -475,7 +478,49 @@ bool radio_common_config_intact(RadioCommon *radio) {
 
   // RF_CH resets to 0x02 on power-on-reset, so reading back the configured
   // channel detects a chip that brown-out reset while the MCU stayed up
-  return nrf24_read_register(radio, NRF24_REG_RF_CH) == RADIO_CHANNEL;
+  return nrf24_read_register(radio, NRF24_REG_RF_CH) == radio->channel;
+}
+
+bool radio_common_set_channel(RadioCommon *radio, uint8_t channel) {
+  if (!radio || !radio->initialized || channel > 125) {
+    return false;
+  }
+
+  // Channel changes require standby; CE stays low - the caller re-enters
+  // RX or TX mode afterwards
+  gpio_set_level(radio->ce_pin, 0);
+  if (!nrf24_write_register(radio, NRF24_REG_RF_CH, channel)) {
+    ESP_LOGE(TAG, "Failed to set channel %d", channel);
+    return false;
+  }
+
+  radio->channel = channel;
+  ESP_LOGI(TAG, "Channel set to %d (%d MHz)", channel, 2400 + channel);
+  return true;
+}
+
+uint16_t radio_common_survey_channel(RadioCommon *radio, uint8_t channel,
+                                     uint16_t samples) {
+  if (!radio || !radio->initialized || channel > 125) {
+    return 0;
+  }
+
+  gpio_set_level(radio->ce_pin, 0);
+  nrf24_write_register(radio, NRF24_REG_RF_CH, channel);
+  nrf24_write_register(radio, NRF24_REG_CONFIG, RADIO_CONFIG_RX_MODE);
+  gpio_set_level(radio->ce_pin, 1);
+  delay_ms(1); // RPD needs >170us of RX before it reads validly
+
+  uint16_t busy = 0;
+  for (uint16_t i = 0; i < samples; i++) {
+    if (nrf24_read_register(radio, NRF24_REG_CD) & 0x01) {
+      busy++;
+    }
+    delay_ms(1);
+  }
+
+  gpio_set_level(radio->ce_pin, 0);
+  return busy;
 }
 
 bool radio_common_validate_config(RadioCommon *radio) {
