@@ -98,9 +98,12 @@ nrf24_write_register(&radio, NRF24_REG_CONFIG, RADIO_CONFIG_TX_MODE);
 - **Network Address**: 0xE7E7E7E7E7
 - **Payload Size**: 6 bytes, fixed (`RADIO_PAYLOAD_SIZE`) — dynamic payloads (DYNPD/FEATURE)
   are never enabled
-- **Auto-ACK**: Enabled on pipe 0 only
-- **Retries**: `SETUP_RETR` = 0x4F → 1250µs auto-retransmit delay (ARD), 15 retries (ARC)
+- **Auto-ACK**: Disabled on all pipes (`EN_AA` = 0x00) — broadcast; ACKs from multiple
+  receivers would collide
+- **Retries**: Disabled (`SETUP_RETR` = 0x00) — fire-and-forget
 - **CRC**: 1-byte
+- **Time field encoding** (payload bytes 0-1, big-endian): 0-99 whole seconds;
+  255 null/clear; 256+d final-countdown deciseconds (d = 0-49, i.e. 4.9-0.1 s)
 
 ## Usage Examples
 

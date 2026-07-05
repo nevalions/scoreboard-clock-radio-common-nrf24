@@ -62,6 +62,21 @@ typedef enum { SPI1_HOST = 0, SPI2_HOST = 1, SPI3_HOST = 2 } spi_host_device_t;
 #define RADIO_ADDRESS {0xE7, 0xE7, 0xE7, 0xE7, 0xE7}
 #define RADIO_PAYLOAD_SIZE 6
 
+// Time field encoding (16-bit big-endian in payload bytes 0-1):
+//   0-99    whole seconds
+//   255     null/clear sentinel (display off)
+//   256+d   final-countdown deciseconds, d = 0-49 (4.9 s ... 0.1 s), shown
+//           by displays as two digits without a decimal point ("49" = 4.9 s;
+//           the sub-5 s warning color and countdown context disambiguate)
+#define RADIO_TIME_NULL 255
+#define RADIO_TIME_DECISECONDS_BASE 256
+#define RADIO_TIME_DECISECONDS_MAX 49
+#define RADIO_TIME_IS_DECISECONDS(v)                                          \
+  ((v) >= RADIO_TIME_DECISECONDS_BASE &&                                      \
+   (v) <= RADIO_TIME_DECISECONDS_BASE + RADIO_TIME_DECISECONDS_MAX)
+#define RADIO_TIME_DECISECONDS(v)                                             \
+  ((uint16_t)((v) - RADIO_TIME_DECISECONDS_BASE))
+
 // RF_SETUP register values: one combined write, not two settings.
 // Bits: RF_DR_LOW=1, RF_DR_HIGH=0 (250 kbps), RF_PWR=11 (0 dBm, max power)
 #define RADIO_RF_SETUP_250KBPS_0DBM 0x26
